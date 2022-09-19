@@ -317,8 +317,6 @@ function Source.on_stdout(self, data)
         local callback = self.pending[id].callback
         self.pending[id] = nil
 
-        local cursor = ctx.context.cursor
-
         local items = {}
         local old_prefix = response.old_prefix
         local results = response.results
@@ -327,25 +325,10 @@ function Source.on_stdout(self, data)
           for _, result in ipairs(results) do
             local newText = result.new_prefix .. result.new_suffix
 
-            local old_suffix = result.old_suffix
-            if string.sub(old_suffix, -1) == '\n' then
-              old_suffix = string.sub(old_suffix, 1, -2)
-            end
-
-            local range = {
-              start = { line = cursor.line, character = cursor.col - #old_prefix - 1 },
-              ['end'] = { line = cursor.line, character = cursor.col + #old_suffix - 1 },
-            }
-
             local item = {
               label = newText,
               filterText = newText,
               data = result,
-              textEdit = {
-                newText = newText,
-                insert = range, -- May be better to exclude the trailing part of old_suffix since it's 'replaced'?
-                replace = range,
-              },
               sortText = newText,
               dup = 0,
             }
@@ -358,8 +341,7 @@ function Source.on_stdout(self, data)
             if #result.new_suffix > 0 then
               item['insertTextFormat'] = cmp.lsp.InsertTextFormat.Snippet
               item['label'] = build_snippet(result.new_prefix, conf:get('snippet_placeholder'), result.new_suffix, false)
-              item['textEdit'].newText = build_snippet(result.new_prefix, '$1', result.new_suffix, true)
-
+              item['insertText'] = build_snippet(result.new_prefix, '$1', result.new_suffix, true)
             end
 
             if result.detail ~= nil then
